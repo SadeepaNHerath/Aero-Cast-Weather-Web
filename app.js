@@ -1,3 +1,4 @@
+// Weather Data
 const searchButton = document.getElementById('search-button');
 const cityInput = document.getElementById('city');
 const historyList = document.getElementById('history');
@@ -55,7 +56,6 @@ function renderWeatherHistory() {
             <button class="btn btn-sm btn-danger">Remove</button>
         `;
 
-        // Remove item on button click
         listItem.querySelector('button').onclick = () => {
             weatherHistory = weatherHistory.filter(w => w !== weather);
             renderWeatherHistory();
@@ -93,7 +93,6 @@ async function getWeatherData(city) {
         initMap(data.coord.lat, data.coord.lon);
         playSound(data.weather[0].main);
 
-        // Add to weather history
         weatherHistory.push(weatherData);
         renderWeatherHistory();
 
@@ -103,7 +102,6 @@ async function getWeatherData(city) {
     }
 }
 
-// Event listeners
 searchButton.addEventListener('click', () => {
     const city = cityInput.value.trim();
     if (city) {
@@ -116,4 +114,87 @@ cityInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
         searchButton.click();
     }
+});
+
+// Date Time
+document.addEventListener('DOMContentLoaded', () => {
+    const dateTime = document.getElementById('dateTime');
+    setInterval(() => {
+        const d = new Date();
+        dateTime.innerHTML = d.toLocaleTimeString() + '<br> ' + d.toLocaleDateString();
+    }, 1000);
+
+    getWeatherData("colombo");
+
+
+    // Dark mode & Light mode
+    const modeSwitch = document.getElementById('mode-switch');
+    const lightIcon = document.getElementById('light-mode');
+    const darkIcon = document.getElementById('dark-mode');
+    const weatherDetails = document.getElementById('weather-details');
+    const cityInput = document.getElementById('city');
+    const historyList = document.getElementById('history');
+    const weatherCard = document.getElementById('weather-card');
+
+    function setTheme(themeName) {
+        if (themeName === 'dark') {
+            document.body.classList.add('bg-dark', 'text-light');
+            document.body.classList.remove('bg-light', 'text-dark');
+            document.querySelectorAll('.icon').forEach(icon => icon.classList.add('text-light'));
+            document.querySelectorAll('.icon').forEach(icon => icon.classList.remove('text-dark'));
+            lightIcon.style.display = 'block';
+            darkIcon.style.display = 'none';
+
+            weatherCard.classList.add('bg-dark', 'text-light');
+            weatherCard.classList.remove('bg-light', 'text-dark');
+            weatherDetails.classList.add('bg-dark', 'text-light');
+            weatherDetails.classList.remove('bg-light', 'text-dark');
+            cityInput.classList.add('bg-dark', 'text-light');
+            cityInput.classList.remove('bg-light', 'text-dark');
+            historyList.classList.add('bg-dark', 'text-light');
+            historyList.classList.remove('bg-light', 'text-dark');
+
+            cityInput.placeholder = 'Enter city name';
+            cityInput.style.color = 'lightgray'; // Placeholder color
+
+            document.querySelectorAll('.icon').forEach(icon => {
+                icon.src = 'path/to/dark-mode/icon.png'; // Use appropriate icon paths
+            });
+        } else {
+            document.body.classList.add('bg-light', 'text-dark');
+            document.body.classList.remove('bg-dark', 'text-light');
+            document.querySelectorAll('.icon').forEach(icon => icon.classList.add('text-dark'));
+            document.querySelectorAll('.icon').forEach(icon => icon.classList.add('text-light'));
+            lightIcon.style.display = 'none';
+            darkIcon.style.display = 'block';
+
+            weatherCard.classList.add('bg-light', 'text-dark');
+            weatherCard.classList.remove('bg-dark', 'text-light');
+            weatherDetails.classList.add('bg-light', 'text-dark');
+            weatherDetails.classList.remove('bg-dark', 'text-light');
+            cityInput.classList.add('bg-light', 'text-dark');
+            cityInput.classList.remove('bg-dark', 'text-light');
+            historyList.classList.add('bg-light', 'text-dark');
+            historyList.classList.remove('bg-dark', 'text-light');
+
+            cityInput.placeholder = 'Enter city name';
+            cityInput.style.color = 'gray'; // Placeholder color
+
+            document.querySelectorAll('.icon').forEach(icon => {
+                icon.src = 'path/to/light-mode/icon.png'; // Use appropriate icon paths
+            });
+        }
+    }
+
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    setTheme(savedTheme);
+
+    modeSwitch.addEventListener('click', () => {
+        const currentTheme = localStorage.getItem('theme') || 'light';
+        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+        setTheme(newTheme);
+        localStorage.setItem('theme', newTheme);
+    });
+
+
 });
