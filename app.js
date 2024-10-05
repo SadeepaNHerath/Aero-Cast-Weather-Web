@@ -58,6 +58,7 @@ async function getWeatherDataByLocation(lat, lon) {
         document.querySelector('.icon').src = `http://openweathermap.org/img/wn/${data.weather[0].icon}.png`;
 
         initMap(lat, lon);
+        playSound(data.weather[0].main);
 
         const day5Api = await fetch(`https://api.weatherapi.com/v1/forecast.json?key=d84dfe92dbbc45e9a75210312243009&q=${data.name}&days=5&aqi=no&alerts=no`);
         const day5Data = await day5Api.json();
@@ -160,7 +161,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const lightIcon = document.getElementById('light-mode');
     const darkIcon = document.getElementById('dark-mode');
     const weatherDetails = document.getElementById('weather-details');
-    const cityInput = document.getElementById('city');
     const weatherCard = document.getElementById('weather-card');
 
     function setTheme(themeName) {
