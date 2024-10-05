@@ -40,7 +40,7 @@ async function getWeatherDataByLocation(lat, lon) {
         const apiKey = '6fe5bb1e207d43ce12572ec5b97ed8a2';
         const response = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric`);
         if (!response.ok) throw new Error('Weather data not available');
-        
+
         const data = await response.json();
         const weatherData = {
             city: data.name,
@@ -56,12 +56,12 @@ async function getWeatherDataByLocation(lat, lon) {
         document.querySelector('.humidity').textContent = `${weatherData.humidity}%`;
         document.querySelector('.wind-speed').textContent = `${weatherData.windSpeed} km/h`;
         document.querySelector('.icon').src = `http://openweathermap.org/img/wn/${data.weather[0].icon}.png`;
-        
+
         initMap(lat, lon);
-        
+
         const day5Api = await fetch(`https://api.weatherapi.com/v1/forecast.json?key=d84dfe92dbbc45e9a75210312243009&q=${data.name}&days=5&aqi=no&alerts=no`);
         const day5Data = await day5Api.json();
-        
+
         forecastUpdate(day5Data);
     } catch (error) {
         alert('Could not fetch weather data. Please try again.');
@@ -86,7 +86,6 @@ async function getWeatherData(city) {
         document.querySelector('.description').textContent = weatherData.description;
         document.querySelector('.humidity').textContent = `${weatherData.humidity}%`;
         document.querySelector('.wind-speed').textContent = `${weatherData.windSpeed} km/h`;
-        document.querySelector('.icon').src = `http://openweathermap.org/img/wn/${data.weather[0].icon}.png`;
         initMap(data.coord.lat, data.coord.lon);
         playSound(data.weather[0].main);
     } catch (error) {
@@ -120,12 +119,14 @@ function forecastUpdate(forecastData) {
         const dayOfWeek = new Date(date).toLocaleDateString('en-US', { weekday: 'short' });
 
         forecastCards.innerHTML += `
-            <div class="card">
-                <div class="forecast-item">
-                    <p>${dayOfWeek}</p>
-                    <div><img src="${icon}" alt="Weather Icon"></div>
-                    <p>${Math.round(maxtemp_c)}°C / ${Math.round(mintemp_c)}°C</p>
-                    <p>${text}</p>
+           <div class="card forecast-card">
+                <div class="forecast-item text-center">
+                    <p class="day-of-week">${dayOfWeek}</p>
+                    <div class="icon-container">
+                        <img src="${icon}" alt="Weather Icon" class="weather-icon">
+                    </div>
+                    <p class="temperature">${Math.round(maxtemp_c)}°C / ${Math.round(mintemp_c)}°C</p>
+                    <p class="weather-description">${text}</p>
                 </div>
             </div>
         `;
