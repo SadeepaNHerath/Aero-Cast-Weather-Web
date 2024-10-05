@@ -1,0 +1,69 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 20px;
+    background-color: #282c34;
+    color: white;
+}
+.light-theme {
+    background-color: #f0f0f0;
+    color: black;
+}
+.weather-card {
+    background-color: #333;
+    padding: 20px;
+    margin-top: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+}
+.light-theme .weather-card {
+    background-color: #fff;
+    color: black;
+}
+.weather-header {
+    display: flex;
+    justify-content: space-between;
+}
+.weather-details, .forecast {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+}
+.weather-item, .forecast-item {
+    text-align: center;
+    margin-right: 10px;
+}
+.forecast-item img {
+    width: 50px;
+}
+#suggestions {
+    background-color: white;
+    color: black;
+    position: absolute;
+    width: 90%;
+    max-width: 300px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    margin-top: 5px;
+    z-index: 10;
+}
+.suggestion-item {
+    padding: 10px;
+    cursor: pointer;
+}
+.suggestion-item:hover {
+    background-color: #ddd;
+}
+.light-theme .suggestion-item:hover {
+    background-color: #ccc;
+}
+#theme-toggle {
+    cursor: pointer;
+    font-size: 24px;
+}
+input[type="text"] {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
