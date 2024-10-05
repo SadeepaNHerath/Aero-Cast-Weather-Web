@@ -5,37 +5,63 @@ body {
     background-color: #282c34;
     color: white;
 }
+
 .light-theme {
     background-color: #f0f0f0;
     color: black;
 }
+
 .weather-card {
     background-color: #333;
     padding: 20px;
     margin-top: 20px;
     border-radius: 10px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+    transition: transform 0.2s, box-shadow 0.2s; /* Add transition for hover effect */
 }
+
+.weather-card:hover {
+    transform: translateY(-5px); /* Slightly lift the card on hover */
+    box-shadow: 0 0 25px rgba(0, 0, 0, 0.5); /* Enhance shadow on hover */
+}
+
 .light-theme .weather-card {
     background-color: #fff;
     color: black;
 }
+
 .weather-header {
     display: flex;
     justify-content: space-between;
+    align-items: center; /* Center align items */
 }
+
+.city {
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.temperature {
+    font-size: 28px; /* Make temperature larger */
+    color: #ffcc00; /* Gold color for temperature */
+}
+
 .weather-details, .forecast {
     display: flex;
     justify-content: space-between;
     margin-top: 10px;
 }
+
 .weather-item, .forecast-item {
     text-align: center;
     margin-right: 10px;
 }
+
 .forecast-item img {
     width: 50px;
+    height: 50px; /* Set height for uniformity */
 }
+
 #suggestions {
     background-color: white;
     color: black;
@@ -47,23 +73,48 @@ body {
     margin-top: 5px;
     z-index: 10;
 }
+
 .suggestion-item {
     padding: 10px;
     cursor: pointer;
+    transition: background-color 0.2s; /* Smooth background transition */
 }
+
 .suggestion-item:hover {
     background-color: #ddd;
 }
+
 .light-theme .suggestion-item:hover {
     background-color: #ccc;
 }
+
 #theme-toggle {
     cursor: pointer;
     font-size: 24px;
 }
+
 input[type="text"] {
     width: 100%;
     padding: 10px;
     border: 1px solid #ccc;
     border-radius: 5px;
+}
+
+/* Additional styles for better card layout */
+.forecast-item {
+    background-color: #444; /* Background for forecast item */
+    padding: 10px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+    transition: transform 0.2s;
+}
+
+.forecast-item:hover {
+    transform: scale(1.05); /* Slightly enlarge forecast item on hover */
+}
+
+#map {
+    width: 100%;
+    height: 300px;
+    margin-top: 20px;
 }

@@ -40,6 +40,7 @@ async function getWeatherDataByLocation(lat, lon) {
         const apiKey = '6fe5bb1e207d43ce12572ec5b97ed8a2';
         const response = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric`);
         if (!response.ok) throw new Error('Weather data not available');
+        
         const data = await response.json();
         const weatherData = {
             city: data.name,
@@ -48,14 +49,20 @@ async function getWeatherDataByLocation(lat, lon) {
             windSpeed: (data.wind.speed * 3.6).toFixed(1),
             description: data.weather[0].description
         };
+
         document.querySelector('.city').textContent = weatherData.city;
         document.querySelector('.temperature').textContent = `${weatherData.temperature}°C`;
         document.querySelector('.description').textContent = weatherData.description;
         document.querySelector('.humidity').textContent = `${weatherData.humidity}%`;
         document.querySelector('.wind-speed').textContent = `${weatherData.windSpeed} km/h`;
         document.querySelector('.icon').src = `http://openweathermap.org/img/wn/${data.weather[0].icon}.png`;
+        
         initMap(lat, lon);
-        playSound(data.weather[0].main);
+        
+        const day5Api = await fetch(`https://api.weatherapi.com/v1/forecast.json?key=d84dfe92dbbc45e9a75210312243009&q=${data.name}&days=5&aqi=no&alerts=no`);
+        const day5Data = await day5Api.json();
+        
+        forecastUpdate(day5Data);
     } catch (error) {
         alert('Could not fetch weather data. Please try again.');
     }
@@ -104,6 +111,26 @@ function getUserLocation() {
     }
 }
 
+function forecastUpdate(forecastData) {
+    const forecastCards = document.getElementById('forecast-cards');
+    forecastCards.innerHTML = '';
+
+    forecastData.forecast.forecastday.forEach((day) => {
+        const { date, day: { maxtemp_c, mintemp_c, condition: { icon, text } } } = day;
+        const dayOfWeek = new Date(date).toLocaleDateString('en-US', { weekday: 'short' });
+
+        forecastCards.innerHTML += `
+            <div class="card">
+                <div class="forecast-item">
+                    <p>${dayOfWeek}</p>
+                    <div><img src="${icon}" alt="Weather Icon"></div>
+                    <p>${Math.round(maxtemp_c)}°C / ${Math.round(mintemp_c)}°C</p>
+                    <p>${text}</p>
+                </div>
+            </div>
+        `;
+    });
+}
 
 searchButton.addEventListener('click', () => {
     const city = cityInput.value.trim();
