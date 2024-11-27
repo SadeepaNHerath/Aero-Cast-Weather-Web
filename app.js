@@ -1,6 +1,6 @@
 'use strict';
 
-const api_key = "7ccaf6d166887ac65768460297e2f71a";
+const api_key = null; //api-key-here;
 
 const fetchData = async function (url, callback) {
     try {
