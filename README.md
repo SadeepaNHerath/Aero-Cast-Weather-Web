@@ -45,3 +45,29 @@ Welcome to **Aero Cast**, a sleek and responsive weather application that delive
 - **Error Handling**: Handles incorrect or missing location data gracefully.
 
 ---
+
+## 📷 Screenshots
+
+### **Dark Mode**
+
+![Screenshot 2024-11-27 141700](https://github.com/user-attachments/assets/9443aa7d-eec3-4e80-9437-43be14f41f45)
+
+![Screenshot 2024-11-27 145150](https://github.com/user-attachments/assets/204397d6-989e-4c76-83c2-7efab8f73385)
+
+### **Light Mode**
+
+![Screenshot 2024-11-27 145118](https://github.com/user-attachments/assets/e4543da5-36ee-4c80-86f7-bc484cce43fa)
+
+![Screenshot 2024-11-27 145134](https://github.com/user-attachments/assets/3dc2b097-0403-4a5d-b0ab-fdfdfdbd2241)
+
+### **Mobile Version**
+
+![Screenshot_20241127-141611](https://github.com/user-attachments/assets/dc2ab218-2024-465a-a2e7-289866c5c6d7)
+
+---
+
+## 🌟 Acknowledgments
+
+- [OpenWeatherMap](https://openweathermap.org/): For reliable weather and pollution data.
+- [Bootstrap](https://getbootstrap.com/): For responsive design and components.
+- [AOS Library](https://michalsnik.github.io/aos/): For scroll animations.
