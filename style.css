@@ -413,3 +413,23 @@
     0% { opacity: 0; }
     100% { opacity: 1; }
   }
+
+  /* Footer styles */
+  footer.bg-light {
+    background-color: var(--card-bg) !important;
+    border-top: 1px solid var(--card-border);
+    color: var(--on-background);
+  }
+
+  [data-bs-theme="dark"] footer.bg-light {
+    background-color: var(--card-bg-secondary) !important;
+  }
+
+  footer a {
+    color: var(--primary);
+    transition: color 0.3s ease;
+  }
+
+  footer a:hover {
+    color: var(--on-primary);
+  }

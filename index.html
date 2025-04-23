@@ -137,17 +137,6 @@
                     <section class="section hourly-forecast mt-4" aria-label="hourly forecast" data-hour-forecast>
                         <!-- Hourly Forecast -->
                     </section>
-                    <footer class="bg-light py-4 mt-4">
-                        <div class="container text-center">
-                            <p class="mb-1">Copyright © 2024 Sadeepa Herath. All rights reserved.</p>
-                            <p class="mb-0">
-                                Powered by
-                                <a href="https://openweathermap.org/api" target="_blank" rel="noopener">
-                                    <img src="assets/images/openweather.png" alt="OpenWeather" height="30">
-                                </a>
-                            </p>
-                        </div>
-                    </footer>
                 </div>
             </div>
             
@@ -160,6 +149,19 @@
                 </div>
             </div>
         </article>
+        
+        <!-- Footer moved outside the column structure to span full width -->
+        <footer class="bg-light py-4 mt-4 w-100">
+            <div class="container text-center">
+                <p class="mb-1">Copyright © 2024 Sadeepa Herath. All rights reserved.</p>
+                <p class="mb-0">
+                    Powered by
+                    <a href="https://openweathermap.org/api" target="_blank" rel="noopener">
+                        <img src="assets/images/openweather.png" alt="OpenWeather" height="30">
+                    </a>
+                </p>
+            </div>
+        </footer>
     </main>
     
     <section class="error-content position-fixed top-0 start-0 w-100 h-100 bg-light d-none" data-error-content>
