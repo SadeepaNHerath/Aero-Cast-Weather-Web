@@ -64,19 +64,17 @@ Welcome to **Aero Cast**, a sleek and responsive weather application that delive
 
 ### **Dark Mode**
 
-![Screenshot 2024-11-27 141700](https://github.com/user-attachments/assets/9443aa7d-eec3-4e80-9437-43be14f41f45)
-
-![Screenshot 2024-11-27 145150](https://github.com/user-attachments/assets/204397d6-989e-4c76-83c2-7efab8f73385)
+![screencapture-localhost-5500-2025-04-23-15_23_18](https://github.com/user-attachments/assets/b7a43390-c943-45bb-8bd9-58e5fb96ca61)
 
 ### **Light Mode**
 
-![Screenshot 2024-11-27 145118](https://github.com/user-attachments/assets/e4543da5-36ee-4c80-86f7-bc484cce43fa)
-
-![Screenshot 2024-11-27 145134](https://github.com/user-attachments/assets/3dc2b097-0403-4a5d-b0ab-fdfdfdbd2241)
+![screencapture-localhost-5500-2025-04-23-15_24_28](https://github.com/user-attachments/assets/c375a887-57c9-478e-a365-80907439ae81)
 
 ### **Mobile Version**
+![screencapture-localhost-5500-2025-04-23-15_27_41](https://github.com/user-attachments/assets/9c1b675d-4d69-4c81-a54c-a6fd4a699ad4) ![screencapture-localhost-5500-2025-04-23-15_27_09](https://github.com/user-attachments/assets/02e400c8-a723-4e02-a41f-12912d78fe0c)
 
-![Screenshot_20241127-141611](https://github.com/user-attachments/assets/dc2ab218-2024-465a-a2e7-289866c5c6d7)
+
+
 
 ---
 
