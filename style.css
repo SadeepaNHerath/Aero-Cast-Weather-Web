@@ -65,6 +65,7 @@
   html {
     font-size: 16px;
     scroll-behavior: smooth;
+    scroll-padding-top: 80px; /* Accounts for fixed header */
   }
   
   body {
@@ -108,11 +109,14 @@
     border-radius: var(--radius-md);
     border: 1px solid var(--card-border);
     transition: transform var(--transition-base), box-shadow var(--transition-base);
+    overflow: hidden;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
   }
   
   .card:hover {
     transform: translateY(-0.25rem);
-    box-shadow: var(--shadow-md);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
   }
   
   .card .card {
@@ -136,6 +140,11 @@
     width: 6.25rem;
     height: auto;
     margin: var(--spacing-md) auto;
+    transition: transform 0.3s ease;
+  }
+  
+  .card:hover .weather-icon {
+    transform: scale(1.1);
   }
   
   .weather-icon-sm {
@@ -147,25 +156,30 @@
   .loading {
     position: fixed;
     inset: 0;
-    background-color: rgba(0, 0, 0, 0.5);
+    background-color: rgba(0, 0, 0, 0.7);
     display: none;
     justify-content: center;
     align-items: center;
     z-index: 9999;
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
   }
   
   .loading.active {
     display: flex;
   }
   
-  .loading::after {
-    content: "";
-    width: 3rem;
-    height: 3rem;
-    border: 0.25rem solid var(--white);
-    border-top-color: var(--primary);
-    border-radius: var(--radius-circle);
-    animation: spin 1s linear infinite;
+  .spinner-container {
+    text-align: center;
+    background-color: var(--card-bg);
+    padding: 2rem;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+  }
+  
+  .loading-text {
+    color: var(--on-background);
+    font-weight: 600;
   }
   
   @keyframes spin {
@@ -229,6 +243,24 @@
     .container {
       padding-inline: var(--spacing-sm);
     }
+    
+    .card {
+      margin-bottom: var(--spacing-md);
+    }
+    
+    #share-btn {
+      width: 2.5rem;
+      height: 2.5rem;
+    }
+    
+    .weather-icon {
+      width: 5rem;
+    }
+    
+    .error-img {
+      width: 100%;
+      max-width: 350px;
+    }
   }
   
   :focus-visible {
@@ -270,4 +302,114 @@
   a {
     cursor: pointer;
     text-decoration: none;
+  }
+
+  .error-img {
+    width: 500px;
+  }
+
+  .share-btn-container {
+    z-index: 100;
+  }
+
+  #share-btn {
+    width: 3rem;
+    height: 3rem;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.3s ease, background-color 0.3s ease;
+  }
+
+  #share-btn:hover {
+    transform: scale(1.1);
+  }
+
+  .temp-unit-toggle {
+    transition: opacity 0.3s ease;
+  }
+
+  .refresh-container {
+    display: flex;
+    align-items: center;
+  }
+
+  #refresh-btn .bi-arrow-clockwise {
+    transition: transform 0.3s ease;
+  }
+
+  #refresh-btn:hover .bi-arrow-clockwise {
+    transform: rotate(180deg);
+  }
+
+  .search-field {
+    border-radius: var(--radius-md);
+    transition: box-shadow 0.3s ease;
+  }
+
+  .search-field:focus {
+    box-shadow: 0 0 0 0.25rem rgba(181, 161, 229, 0.25);
+  }
+
+  .list-group-item {
+    transition: background-color 0.3s ease;
+    cursor: pointer;
+  }
+
+  .list-group-item:hover {
+    background-color: rgba(181, 161, 229, 0.1);
+  }
+
+  [data-aos] {
+    transition-timing-function: cubic-bezier(0.25, 0.1, 0.25, 1.0);
+  }
+
+  .stat-number {
+    display: inline-block;
+    transition: transform 0.3s ease, color 0.3s ease;
+  }
+
+  .card:hover .stat-number {
+    transform: scale(1.1);
+    color: var(--primary);
+  }
+
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(181, 161, 229, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(181, 161, 229, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(181, 161, 229, 0); }
+  }
+
+  .pulse-animation {
+    animation: pulse 1.5s ease-out;
+  }
+
+  [data-bs-theme="dark"] .loading {
+    background-color: rgba(0, 0, 0, 0.85);
+  }
+
+  .toast {
+    background-color: var(--card-bg);
+    color: var(--on-background);
+  }
+
+  [data-bs-theme="dark"] .toast {
+    background-color: var(--card-bg);
+    border-color: var(--card-border);
+  }
+
+  [data-bs-theme="dark"] .toast-header {
+    background-color: var(--card-bg-secondary);
+    color: var(--on-background);
+    border-bottom-color: var(--card-border);
+  }
+
+  .fade-in {
+    animation: fadeIn 0.5s ease-in;
+  }
+
+  @keyframes fadeIn {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
   }

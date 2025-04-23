@@ -1,6 +1,24 @@
 'use strict';
 
-const api_key = null; //api-key-here;
+const api_key = "7ccaf6d166887ac65768460297e2f71a";
+
+// Track current units setting
+let currentUnit = localStorage.getItem('tempUnit') || 'metric';
+
+// Update unit toggle based on stored preference
+const updateUnitToggle = () => {
+    if (currentUnit === 'metric') {
+        document.getElementById('celsius').checked = true;
+    } else {
+        document.getElementById('fahrenheit').checked = true;
+    }
+};
+
+// Initialize last location for refresh functionality
+let lastLocation = {
+    lat: null,
+    lon: null
+};
 
 const fetchData = async function (url, callback) {
     try {
@@ -16,12 +34,19 @@ const fetchData = async function (url, callback) {
     }
 }
 
+// Add a new URL method for direct city name search
 const url = {
     currentWeather(lat, lon) {
-        return `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric`;
+        return `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=${currentUnit}`;
+    },
+    currentWeatherByCity(city) {
+        return `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&units=${currentUnit}`;
     },
     forecast(lat, lon) {
-        return `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=metric`;
+        return `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=${currentUnit}`;
+    },
+    forecastByCity(city) {
+        return `https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(city)}&units=${currentUnit}`;
     },
     airPollution(lat, lon) {
         return `https://api.openweathermap.org/data/2.5/air_pollution?lat=${lat}&lon=${lon}`;
@@ -59,7 +84,20 @@ const getHours = function (timeUnix, timezone) {
     return `${hours % 12 || 12} ${period}`;
 }
 
-const mps_to_kmh = mps => (mps * 3.6).toFixed(1);
+// Convert temperature based on unit
+const formatTemp = temp => {
+    const value = parseInt(temp);
+    return `${value}°${currentUnit === 'metric' ? 'C' : 'F'}`;
+};
+
+// Enhanced wind speed conversion
+const formatWindSpeed = windSpeed => {
+    if (currentUnit === 'metric') {
+        return `${(windSpeed * 3.6).toFixed(1)} km/h`;
+    } else {
+        return `${(windSpeed).toFixed(1)} mph`;
+    }
+};
 
 const aqiText = {
     1: {
@@ -88,11 +126,13 @@ const defaultLocation = "#/weather?lat=6.9271&lon=79.8612";
 
 const currentLocation = function () {
     if (!navigator.geolocation) {
-        console.error('Geolocation is not supported by this browser.');
+        showToast("Geolocation is not supported by this browser", "warning");
         window.location.hash = defaultLocation;
         return;
     }
 
+    loading.style.display = 'flex';
+    
     window.navigator.geolocation.getCurrentPosition(
         res => {
             const { latitude, longitude } = res.coords;
@@ -101,19 +141,32 @@ const currentLocation = function () {
         },
         err => {
             console.error('Error obtaining location:', err);
+            showToast("Could not access your location. Using default location instead.", "warning");
             window.location.hash = defaultLocation;
+            loading.style.display = 'none';
         }
     );
 }
 
+// Enhance searchedLocation function to handle direct city name searches
 const searchedLocation = query => {
-    updateWeather(...query.split('&'));
+    if (query.includes('city=')) {
+        const city = query.split('=')[1];
+        updateWeatherByCity(decodeURIComponent(city));
+    } else {
+        updateWeather(...query.split('&'));
+    }
     searchResult.innerHTML = '';
 };
 
+// Update routes map to include direct city search
 const routes = new Map([
     ["/current-location", currentLocation],
-    ["/weather", searchedLocation]
+    ["/weather", searchedLocation],
+    ["/city", query => {
+        const city = query.split('=')[1];
+        updateWeatherByCity(decodeURIComponent(city));
+    }]
 ]);
 
 const checkHash = function () {
@@ -124,6 +177,41 @@ const checkHash = function () {
 
 window.addEventListener("hashchange", checkHash);
 window.addEventListener("load", () => {
+    // Initialize unit toggle based on saved preference
+    updateUnitToggle();
+    
+    // Add event listeners for unit toggle
+    document.querySelectorAll('input[name="temp-unit"]').forEach(input => {
+        input.addEventListener('change', function() {
+            currentUnit = this.value;
+            localStorage.setItem('tempUnit', currentUnit);
+            
+            // Refresh weather with new unit if we have coordinates
+            if (lastLocation.lat && lastLocation.lon) {
+                updateWeather(`lat=${lastLocation.lat}`, `lon=${lastLocation.lon}`);
+            }
+        });
+    });
+    
+    // Set up clear search button
+    document.getElementById('clear-search')?.addEventListener('click', () => {
+        searchField.value = '';
+        searchResult.innerHTML = '';
+        document.getElementById('search-placeholder').classList.remove('d-none');
+    });
+    
+    // Set up refresh button
+    document.getElementById('refresh-btn')?.addEventListener('click', () => {
+        if (lastLocation.lat && lastLocation.lon) {
+            document.getElementById('refresh-btn').querySelector('i').classList.add('rotating');
+            updateWeather(`lat=${lastLocation.lat}`, `lon=${lastLocation.lon}`, true);
+        }
+    });
+    
+    // Set up share button
+    document.getElementById('share-btn')?.addEventListener('click', shareWeather);
+    
+    // Check if hash is present, otherwise use default
     if (!window.location.hash) {
         window.location.hash = "#/current-location";
     } else {
@@ -137,8 +225,7 @@ const searchResult = document.querySelector("[data-search-result]");
 let searchTimeout = null;
 const searchTimeoutDuration = 500;
 
-
-
+// Modify search field event listener to show initial text
 searchField?.addEventListener('input', function () {
     if (searchTimeout) {
         clearTimeout(searchTimeout);
@@ -146,40 +233,171 @@ searchField?.addEventListener('input', function () {
 
     if (!searchField.value) {
         searchResult.innerHTML = '';
+        document.getElementById('search-placeholder')?.classList.remove('d-none');
         return;
     }
 
     searchTimeout = setTimeout(() => {
-        fetchData(url.geo(searchField.value), function (locations) {
-            searchResult.innerHTML = `
-                <ul class="list-group" data-search-list></ul>
-            `;
+        // Show loading indicator in search
+        searchResult.innerHTML = `
+            <div class="text-center py-3">
+                <div class="spinner-border spinner-border-sm text-primary" role="status">
+                    <span class="visually-hidden">Searching...</span>
+                </div>
+                <p class="mt-2 mb-0">Searching for "${searchField.value}"...</p>
+            </div>
+        `;
+        
+        // For direct city search without coordinates lookup
+        if (searchField.value.trim().length > 2) {
+            // Try direct city search first
+            fetchData(`https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(searchField.value)}&appid=${api_key}`, function(weatherData) {
+                if (weatherData) {
+                    const { name, sys: { country }, coord: { lat, lon } } = weatherData;
+                    searchResult.innerHTML = `
+                        <ul class="list-group shadow-sm" data-search-list>
+                            <li class="list-group-item d-flex align-items-center gap-2">
+                                <i class="bi bi-geo-alt text-primary"></i>
+                                <div class="flex-grow-1">
+                                    <p class="mb-0 fw-bold">${name}</p>
+                                    <small class="text-muted">${country}</small>
+                                </div>
+                                <i class="bi bi-chevron-right text-muted"></i>
+                                <a href="#/weather?lat=${lat}&lon=${lon}" class="stretched-link"></a>
+                            </li>
+                        </ul>
+                    `;
 
-            const searchList = searchResult.querySelector("[data-search-list]");
-            
-            for (const { name, lat, lon, country, state } of locations) {
-                const item = document.createElement("li");
-                item.classList.add("list-group-item", "d-flex", "align-items-center", "gap-2");
-                item.innerHTML = `
-                    <i class="bi bi-geo-alt"></i>
-                    <div>
-                        <p class="mb-0 fw-bold">${name}</p>
-                        <small class="text-muted">${state || ""} ${country}</small>
-                    </div>
-                    <a href="#/weather?lat=${lat}&lon=${lon}" class="stretched-link"></a>
-                `;
-                
-                item.addEventListener('click', () => {
-                    searchField.value = '';
-                    searchResult.innerHTML = '';
-                    updateWeather(`lat=${lat}`, `lon=${lon}`);
+                    // Add click event to the search result
+                    const item = searchResult.querySelector('li');
+                    item.addEventListener('click', () => {
+                        searchField.value = '';
+                        searchResult.innerHTML = '';
+                        
+                        // Update weather data
+                        updateWeather(`lat=${lat}`, `lon=${lon}`);
+                        
+                        // Close modal after selection
+                        closeSearchModal();
+                    });
+                }
+            }, error => {
+                // If direct city search fails, fall back to geocoding API
+                fetchData(url.geo(searchField.value), function (locations) {
+                    handleGeocodingResults(locations);
                 });
-
-                searchList.appendChild(item);
-            }
-        });
+            });
+        } else {
+            // For shorter queries or geocoding search
+            fetchData(url.geo(searchField.value), function (locations) {
+                handleGeocodingResults(locations);
+            });
+        }
     }, searchTimeoutDuration);
 });
+
+// Function to handle geocoding API results
+function handleGeocodingResults(locations) {
+    if (locations.length === 0) {
+        searchResult.innerHTML = `
+            <div class="text-center py-3">
+                <i class="bi bi-search text-muted display-4"></i>
+                <p class="mb-0">No locations found for "${searchField.value}"</p>
+            </div>
+        `;
+        return;
+    }
+    
+    searchResult.innerHTML = `
+        <ul class="list-group shadow-sm" data-search-list></ul>
+    `;
+
+    const searchList = searchResult.querySelector("[data-search-list]");
+    document.getElementById('search-placeholder')?.classList.add('d-none');
+    
+    for (const { name, lat, lon, country, state } of locations) {
+        const item = document.createElement("li");
+        item.classList.add("list-group-item", "d-flex", "align-items-center", "gap-2");
+        item.innerHTML = `
+            <i class="bi bi-geo-alt text-primary"></i>
+            <div class="flex-grow-1">
+                <p class="mb-0 fw-bold">${name}</p>
+                <small class="text-muted">${state || ""} ${country}</small>
+            </div>
+            <i class="bi bi-chevron-right text-muted"></i>
+            <a href="#/weather?lat=${lat}&lon=${lon}" class="stretched-link"></a>
+        `;
+        
+        item.addEventListener('click', () => {
+            searchField.value = '';
+            searchResult.innerHTML = '';
+            updateWeather(`lat=${lat}`, `lon=${lon}`);
+            
+            // Close modal after selection
+            closeSearchModal();
+        });
+
+        searchList.appendChild(item);
+    }
+}
+
+// Helper function to close search modal
+function closeSearchModal() {
+    const searchModal = bootstrap.Modal.getInstance(document.getElementById('searchModal'));
+    if (searchModal) {
+        searchModal.hide();
+    }
+}
+
+// Add a new function to update weather by city name directly
+function updateWeatherByCity(cityName) {
+    loading.style.display = 'flex';
+    container.style.overflowY = 'hidden';
+    container.classList.remove("fade-in");
+    errorContent.classList.add('d-none');
+
+    const currentWeatherSection = document.querySelector("[data-current-weather]");
+    const highlightsSection = document.querySelector("[data-highlights]");
+    const hourlySection = document.querySelector("[data-hour-forecast]");
+    const forecastSection = document.querySelector("[data-5day-forecast]");
+
+    currentWeatherSection.innerHTML = '';
+    highlightsSection.innerHTML = '';
+    hourlySection.innerHTML = '';
+    forecastSection.innerHTML = '';
+
+    // Reset current location button state
+    if (currentLocationBtn) {
+        currentLocationBtn.removeAttribute("disabled");
+    }
+
+    // Fetch weather data using city name
+    fetch(`https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(cityName)}&units=${currentUnit}&appid=${api_key}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`City not found or API error: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            const { coord: { lat, lon } } = data;
+            
+            // Save coordinates for refresh functionality
+            lastLocation.lat = lat;
+            lastLocation.lon = lon;
+            
+            // Update URL without triggering another data fetch
+            window.history.replaceState(null, '', `#/weather?lat=${lat}&lon=${lon}`);
+            
+            // Now use standard updateWeather with the obtained coordinates
+            updateWeather(`lat=${lat}`, `lon=${lon}`);
+        })
+        .catch(error => {
+            console.error('Error fetching city weather data:', error);
+            showToast(`Unable to find weather data for "${cityName}"`, "warning");
+            error404();
+        });
+}
 
 searchResult.addEventListener('click', function (event) {
     if (event.target.closest('.list-group-item')) {
@@ -192,10 +410,64 @@ const loading = document.querySelector("[data-loading]");
 const currentLocationBtn = document.querySelector("[data-current-location-btn]");
 const errorContent = document.querySelector("[data-error-content]");
 
-const updateWeather = function (lat, lon) {
+// Update last updated time
+const updateLastUpdatedTime = () => {
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    document.getElementById('update-time').textContent = timeStr;
+    document.getElementById('last-updated').classList.remove('d-none');
+    
+    // Stop rotation animation on refresh button
+    const refreshBtn = document.getElementById('refresh-btn').querySelector('i');
+    refreshBtn.classList.remove('rotating');
+};
+
+// Show toast notifications
+const showToast = (message, type = 'info') => {
+    const alertTime = document.getElementById('alert-time');
+    const alertMessage = document.getElementById('alert-message');
+    const weatherAlert = document.getElementById('weatherAlert');
+    
+    alertTime.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    alertMessage.textContent = message;
+    
+    // Set icon based on type
+    const toastHeader = weatherAlert.querySelector('.toast-header i');
+    toastHeader.className = `bi ${type === 'warning' ? 'bi-exclamation-triangle-fill text-warning' : 'bi-info-circle-fill text-info'} me-2`;
+    
+    const toast = new bootstrap.Toast(weatherAlert);
+    toast.show();
+};
+
+// Share current weather
+const shareWeather = async () => {
+    if (!navigator.share) {
+        showToast("Sharing is not supported on this browser", "warning");
+        return;
+    }
+    
+    try {
+        const locationName = document.querySelector('[data-location]')?.textContent || "weather forecast";
+        const currentTemp = document.querySelector('.display-1')?.textContent || "";
+        
+        await navigator.share({
+            title: `Aero Cast - Weather for ${locationName}`,
+            text: `Check out the weather in ${locationName}: ${currentTemp}. Powered by Aero Cast.`,
+            url: window.location.href
+        });
+    } catch (err) {
+        console.error('Error sharing:', err);
+    }
+};
+
+const updateWeather = function (lat, lon, isRefresh = false) {
     const [latQuery, lonQuery] = [lat, lon];
     const latitude = latQuery.split('=')[1];
     const longitude = lonQuery.split('=')[1];
+    
+    // Save for refresh functionality
+    lastLocation.lat = latitude;
+    lastLocation.lon = longitude;
 
     loading.style.display = 'flex';
     container.style.overflowY = 'hidden';
@@ -218,33 +490,47 @@ const updateWeather = function (lat, lon) {
         currentLocationBtn?.removeAttribute("disabled");
     }
 
-  fetchData(url.currentWeather(latitude, longitude), function (currentWeather) {
+    fetchData(url.currentWeather(latitude, longitude), function (currentWeather) {
         const {
             weather,
             dt: dateUnix,
             sys: { sunrise: sunriseUnixUTC, sunset: sunsetUnixUTC },
             main: { temp, feels_like, pressure, humidity },
             visibility,
-            timezone
+            timezone,
+            wind: { speed: windSpeed }
         } = currentWeather;
         const [{ description, icon }] = weather;
 
         currentWeatherSection.innerHTML = `
             <div class="card h-100" data-aos="fade-right">
                 <div class="card-body">
-                    <h2 class="card-title h5">Now</h2>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h2 class="card-title h5 mb-0">Current Weather</h2>
+                        <span class="badge rounded-pill bg-primary">${getDate(dateUnix, timezone)}</span>
+                    </div>
                     <div class="text-center my-4">
-                        <h3 class="display-1">${parseInt(temp)}&deg;C</h3>
-                        <img src="assets/images/weather_icons/${icon}.png" alt="${description}" width="64" height="64" class="weather-icon">
-                        <p class="lead">${description}</p>
+                        <h3 class="display-1 stat-number">${formatTemp(temp)}</h3>
+                        <div class="weather-icon-container">
+                            <img src="assets/images/weather_icons/${icon}.png" alt="${description}" width="64" height="64" class="weather-icon">
+                        </div>
+                        <p class="lead text-capitalize">${description}</p>
+                        <div class="d-flex justify-content-center align-items-center gap-3 mt-3">
+                            <span class="d-flex align-items-center">
+                                <i class="bi bi-wind me-1"></i> ${formatWindSpeed(windSpeed)}
+                            </span>
+                            <span class="d-flex align-items-center">
+                                <i class="bi bi-droplet me-1"></i> ${humidity}%
+                            </span>
+                        </div>
                     </div>
                     <ul class="list-group list-group-flush">
                         <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <span><i class="bi bi-calendar"></i> Date</span>
+                            <span><i class="bi bi-calendar-event text-primary me-2"></i> Date</span>
                             <span>${getDate(dateUnix, timezone)}</span>
                         </li>
                         <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <span><i class="bi bi-geo-alt"></i> Location</span>
+                            <span><i class="bi bi-geo-alt text-danger me-2"></i> Location</span>
                             <span data-location>Loading...</span>
                         </li>
                     </ul>
@@ -256,6 +542,9 @@ const updateWeather = function (lat, lon) {
             if (locations?.[0]) {
                 const { name, country } = locations[0];
                 document.querySelector('[data-location]').textContent = `${name}, ${country}`;
+                
+                // Update page title with location
+                document.title = `Aero Cast | ${name}, ${country}`;
             }
         });
 
@@ -270,62 +559,81 @@ const updateWeather = function (lat, lon) {
             highlightsSection.innerHTML = `
                 <div class="card" data-aos="fade-left">
                     <div class="card-body">
-                        <h2 class="card-title h5">Today's Highlights</h2>
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h2 class="card-title h5 mb-0">Today's Highlights</h2>
+                            <span class="badge rounded-pill bg-${aqi <= 2 ? 'success' : aqi <= 3 ? 'warning' : 'danger'}">${aqiData.level}</span>
+                        </div>
                         <div class="row g-3 mt-2">
                             <!-- Air Quality -->
                             <div class="col-md-6" data-aos="zoom-in" data-aos-delay="100">
-                                <div class="card bg-light">
+                                <div class="card bg-light h-100">
                                     <div class="card-body">
-                                        <h3 class="h6 mb-3">Air Quality Index</h3>
+                                        <h3 class="h6 mb-3 d-flex align-items-center">
+                                            <i class="bi bi-wind text-primary me-2"></i>
+                                            Air Quality Index
+                                            <i class="bi bi-info-circle ms-2" data-bs-toggle="tooltip" title="${aqiData.message}"></i>
+                                        </h3>
                                         <div class="wrapper">
-                                            <span class="bi bi-wind"></span>
                                             <ul class="list-unstyled">
                                                 <li class="mb-2">
                                                     <div class="d-flex justify-content-between">
                                                         <span>PM2.5</span>
-                                                        <span class="fw-bold">${pm2_5.toFixed(2)}</span>
+                                                        <span class="fw-bold stat-number">${pm2_5.toFixed(2)}</span>
+                                                    </div>
+                                                    <div class="progress" style="height: 6px;">
+                                                        <div class="progress-bar bg-${getAqiColor(pm2_5, 25)}" style="width: ${Math.min(pm2_5/25*100, 100)}%"></div>
                                                     </div>
                                                 </li>
                                                 <li class="mb-2">
                                                     <div class="d-flex justify-content-between">
                                                         <span>SO2</span>
-                                                        <span class="fw-bold">${so2.toFixed(2)}</span>
+                                                        <span class="fw-bold stat-number">${so2.toFixed(2)}</span>
+                                                    </div>
+                                                    <div class="progress" style="height: 6px;">
+                                                        <div class="progress-bar bg-${getAqiColor(so2, 40)}" style="width: ${Math.min(so2/40*100, 100)}%"></div>
                                                     </div>
                                                 </li>
                                                 <li class="mb-2">
                                                     <div class="d-flex justify-content-between">
                                                         <span>NO2</span>
-                                                        <span class="fw-bold">${no2.toFixed(2)}</span>
+                                                        <span class="fw-bold stat-number">${no2.toFixed(2)}</span>
+                                                    </div>
+                                                    <div class="progress" style="height: 6px;">
+                                                        <div class="progress-bar bg-${getAqiColor(no2, 40)}" style="width: ${Math.min(no2/40*100, 100)}%"></div>
                                                     </div>
                                                 </li>
                                                 <li>
                                                     <div class="d-flex justify-content-between">
                                                         <span>O3</span>
-                                                        <span class="fw-bold">${o3.toFixed(2)}</span>
+                                                        <span class="fw-bold stat-number">${o3.toFixed(2)}</span>
+                                                    </div>
+                                                    <div class="progress" style="height: 6px;">
+                                                        <div class="progress-bar bg-${getAqiColor(o3, 60)}" style="width: ${Math.min(o3/60*100, 100)}%"></div>
                                                     </div>
                                                 </li>
                                             </ul>
                                         </div>
-                                        <span class="badge bg-${aqi <= 2 ? 'success' : aqi <= 3 ? 'warning' : 'danger'}" 
-                                              title="${aqiData.message}">${aqiData.level}</span>
                                     </div>
                                 </div>
                             </div>
 
                             <!-- Sunrise & Sunset -->
                             <div class="col-md-6" data-aos="zoom-in" data-aos-delay="200">
-                                <div class="card bg-light">
+                                <div class="card bg-light h-100">
                                     <div class="card-body">
-                                        <h3 class="h6 mb-3">Sunrise & Sunset</h3>
+                                        <h3 class="h6 mb-3 d-flex align-items-center">
+                                            <i class="bi bi-sun text-warning me-2"></i>
+                                            Sunrise & Sunset
+                                        </h3>
                                         <div class="d-flex justify-content-between">
-                                            <div class="text-center">
+                                            <div class="text-center p-3 rounded" style="background-color: rgba(255,193,7,0.1);">
                                                 <i class="bi bi-sunrise text-warning h4"></i>
-                                                <p class="mb-0">${getTime(sunriseUnixUTC, timezone)}</p>
+                                                <p class="mb-0 fw-bold">${getTime(sunriseUnixUTC, timezone)}</p>
                                                 <small class="text-muted">Sunrise</small>
                                             </div>
-                                            <div class="text-center">
+                                            <div class="text-center p-3 rounded" style="background-color: rgba(220,53,69,0.1);">
                                                 <i class="bi bi-sunset text-danger h4"></i>
-                                                <p class="mb-0">${getTime(sunsetUnixUTC, timezone)}</p>
+                                                <p class="mb-0 fw-bold">${getTime(sunsetUnixUTC, timezone)}</p>
                                                 <small class="text-muted">Sunset</small>
                                             </div>
                                         </div>
@@ -334,49 +642,61 @@ const updateWeather = function (lat, lon) {
                             </div>
 
                             <!-- Additional Highlights -->
-                            <div class="col-md-6" data-aos="zoom-in" data-aos-delay="300">
-                                <div class="card bg-light">
+                            <div class="col-md-6 col-lg-3" data-aos="zoom-in" data-aos-delay="300">
+                                <div class="card bg-light h-100">
                                     <div class="card-body">
-                                        <h3 class="h6 mb-3">Humidity</h3>
+                                        <h3 class="h6 mb-3 d-flex align-items-center">
+                                            <i class="bi bi-moisture text-info me-2"></i>
+                                            Humidity
+                                        </h3>
                                         <div class="d-flex align-items-center gap-3">
-                                            <i class="bi bi-moisture h4 mb-0"></i>
-                                            <span class="h4 mb-0">${humidity}%</span>
+                                            <div class="progress-circle" data-value="${humidity}">
+                                                <div class="progress-circle-inner display-5 stat-number">${humidity}%</div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div class="col-md-6" data-aos="zoom-in" data-aos-delay="400">
-                                <div class="card bg-light">
+                            <div class="col-md-6 col-lg-3" data-aos="zoom-in" data-aos-delay="400">
+                                <div class="card bg-light h-100">
                                     <div class="card-body">
-                                        <h3 class="h6 mb-3">Pressure</h3>
+                                        <h3 class="h6 mb-3 d-flex align-items-center">
+                                            <i class="bi bi-speedometer2 text-success me-2"></i>
+                                            Pressure
+                                        </h3>
                                         <div class="d-flex align-items-center gap-3">
-                                            <i class="bi bi-speedometer2 h4 mb-0"></i>
-                                            <span class="h4 mb-0">${pressure} hPa</span>
+                                            <span class="h4 mb-0 stat-number">${pressure}</span>
+                                            <small class="text-muted">hPa</small>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div class="col-md-6" data-aos="zoom-in" data-aos-delay="500">
-                                <div class="card bg-light">
+                            <div class="col-md-6 col-lg-3" data-aos="zoom-in" data-aos-delay="500">
+                                <div class="card bg-light h-100">
                                     <div class="card-body">
-                                        <h3 class="h6 mb-3">Visibility</h3>
+                                        <h3 class="h6 mb-3 d-flex align-items-center">
+                                            <i class="bi bi-eye text-primary me-2"></i>
+                                            Visibility
+                                        </h3>
                                         <div class="d-flex align-items-center gap-3">
-                                            <i class="bi bi-eye h4 mb-0"></i>
-                                            <span class="h4 mb-0">${(visibility / 1000).toFixed(1)} km</span>
+                                            <span class="h4 mb-0 stat-number">${(visibility / 1000).toFixed(1)}</span>
+                                            <small class="text-muted">km</small>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div class="col-md-6" data-aos="zoom-in" data-aos-delay="600">
-                                <div class="card bg-light">
+                            <div class="col-md-6 col-lg-3" data-aos="zoom-in" data-aos-delay="600">
+                                <div class="card bg-light h-100">
                                     <div class="card-body">
-                                        <h3 class="h6 mb-3">Feels Like</h3>
+                                        <h3 class="h6 mb-3 d-flex align-items-center">
+                                            <i class="bi bi-thermometer-half text-danger me-2"></i>
+                                            Feels Like
+                                        </h3>
                                         <div class="d-flex align-items-center gap-3">
-                                            <i class="bi bi-thermometer-half h4 mb-0"></i>
-                                            <span class="h4 mb-0">${parseInt(feels_like)}&deg;C</span>
+                                            <span class="h4 mb-0 stat-number">${formatTemp(feels_like)}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -385,6 +705,9 @@ const updateWeather = function (lat, lon) {
                     </div>
                 </div>
             `;
+            
+            // Initialize tooltips after content is loaded
+            initTooltips();
         });
 
         fetchData(url.forecast(latitude, longitude), function (forecast) {
@@ -396,10 +719,15 @@ const updateWeather = function (lat, lon) {
             hourlySection.innerHTML = `
                 <div class="card" data-aos="fade-up">
                     <div class="card-body">
-                        <h2 class="card-title h5">Today at</h2>
-                        <div class="row g-3 mt-2" data-temp></div>
+                        <h2 class="card-title h5">Hourly Forecast</h2>
+                        <div class="hourly-container mt-3">
+                            <div class="row g-3" data-temp></div>
+                        </div>
+                        
                         <h3 class="h6 mt-4">Wind Speed</h3>
-                        <div class="row g-3" data-wind></div>
+                        <div class="hourly-container">
+                            <div class="row g-3" data-wind></div>
+                        </div>
                     </div>
                 </div>
             `;
@@ -419,27 +747,27 @@ const updateWeather = function (lat, lon) {
                 const windRow = hourlySection.querySelector('[data-wind]');
 
                 tempRow.innerHTML += `
-                    <div class="col-md-2 col-4">
-                        <div class="card bg-light text-center">
-                            <div class="card-body">
-                                <p class="mb-2">${getHours(dataTimeUnix, timezone)}</p>
+                    <div class="col-4 col-md-3 col-lg-2">
+                        <div class="card bg-light text-center h-100">
+                            <div class="card-body p-2">
+                                <p class="mb-2 fw-bold">${getHours(dataTimeUnix, timezone)}</p>
                                 <img src="assets/images/weather_icons/${icon}.png" width="48" height="48"
                                     loading="lazy" alt="${description}" class="weather-icon-sm mb-2">
-                                <p class="mb-0">${parseInt(temp)}&deg;C</p>
+                                <p class="mb-0">${formatTemp(temp)}</p>
                             </div>
                         </div>
                     </div>
                 `;
 
                 windRow.innerHTML += `
-                    <div class="col-md-2 col-4">
-                        <div class="card bg-light text-center">
-                            <div class="card-body">
-                                <p class="mb-2">${getHours(dataTimeUnix, timezone)}</p>
+                    <div class="col-4 col-md-3 col-lg-2">
+                        <div class="card bg-light text-center h-100">
+                            <div class="card-body p-2">
+                                <p class="mb-2 fw-bold">${getHours(dataTimeUnix, timezone)}</p>
                                 <img src="assets/images/weather_icons/direction.png" width="48" height="48"
                                     loading="lazy" alt="wind direction" class="weather-icon-sm mb-2"
                                     style="transform: rotate(${windDirection - 180}deg)">
-                                <p class="mb-0">${mps_to_kmh(windSpeed)} km/h</p>
+                                <p class="mb-0">${formatWindSpeed(windSpeed)}</p>
                             </div>
                         </div>
                     </div>
@@ -457,7 +785,7 @@ const updateWeather = function (lat, lon) {
 
             for (let i = 7; i < forecastList.length; i += 8) {
                 const {
-                    main: { temp_max },
+                    main: { temp_max, temp_min },
                     weather,
                     dt_txt
                 } = forecastList[i];
@@ -472,17 +800,40 @@ const updateWeather = function (lat, lon) {
                                 <img src="assets/images/weather_icons/${icon}.png" width="36" height="36"
                                     alt="${description}" class="weather-icon-sm" title="${description}">
                                 <div>
-                                    <p class="mb-0">${date.getDate()} ${monthNames[date.getMonth()]}</p>
+                                    <p class="mb-0 fw-bold">${date.getDate()} ${monthNames[date.getMonth()]}</p>
                                     <small class="text-muted">${weekDayNames[date.getUTCDay()]}</small>
                                 </div>
                             </div>
                             <div class="text-end">
-                                <span class="h6 mb-0">${parseInt(temp_max)}&deg;C</span>
+                                <span class="h6 mb-0">${formatTemp(temp_max)}</span>
+                                <br>
+                                <small class="text-muted">${formatTemp(temp_min)}</small>
                             </div>
                         </div>
                     </li>
                 `;
             }
+            
+            // If this was from a refresh action, add pulse animation
+            if (isRefresh) {
+                const cards = document.querySelectorAll('.card');
+                cards.forEach(card => {
+                    card.classList.add('pulse-animation');
+                    setTimeout(() => card.classList.remove('pulse-animation'), 2000);
+                });
+                
+                // Show toast
+                showToast("Weather information updated successfully");
+            }
+            
+            // Update the last updated time
+            updateLastUpdatedTime();
+            
+            // Initialize AOS
+            AOS.refresh();
+            
+            // Initialize tooltips
+            initTooltips();
         });
 
         loading.style.display = 'none';
@@ -528,3 +879,51 @@ function updateDarkModeIcon(isDark) {
 
 const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
 const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+
+// Helper to determine AQI color based on value and threshold
+function getAqiColor(value, threshold) {
+    const percent = (value / threshold) * 100;
+    if (percent <= 50) return 'success';
+    if (percent <= 75) return 'warning';
+    return 'danger';
+}
+
+// Initialize tooltips
+function initTooltips() {
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+}
+
+// Add animation class for refresh button
+document.addEventListener('DOMContentLoaded', () => {
+    const style = document.createElement('style');
+    style.textContent = `
+        .rotating {
+            animation: rotating 2s linear infinite;
+        }
+        @keyframes rotating {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    `;
+    document.head.appendChild(style);
+});
+
+// Event listener for form submission in search modal
+window.addEventListener('load', () => {
+    // ...existing code...
+    
+    // Add form submission handler for search
+    const searchForm = document.getElementById('search-form');
+    if (searchForm) {
+        searchForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            if (searchField.value.trim()) {
+                updateWeatherByCity(searchField.value.trim());
+                closeSearchModal();
+                searchField.value = '';
+                searchResult.innerHTML = '';
+            }
+        });
+    }
+});
