@@ -64,11 +64,11 @@ Welcome to **Aero Cast**, a sleek and responsive weather application that delive
 
 ### **Dark Mode**
 
-![screencapture-localhost-5500-2025-04-23-15_23_18](https://github.com/user-attachments/assets/b7a43390-c943-45bb-8bd9-58e5fb96ca61)
+![screencapture-localhost-5500-2025-04-23-15_23_18](https://github.com/user-attachments/assets/ba1e02f2-f822-4f08-a3b5-71ee8c779896)
 
 ### **Light Mode**
 
-![screencapture-localhost-5500-2025-04-23-15_24_28](https://github.com/user-attachments/assets/c375a887-57c9-478e-a365-80907439ae81)
+![screencapture-localhost-5500-2025-04-23-15_24_28](https://github.com/user-attachments/assets/b152360b-2205-4e5d-b4b4-d94533a2fd4e)
 
 ### **Mobile Version**
 ![screencapture-localhost-5500-2025-04-23-15_27_41](https://github.com/user-attachments/assets/9c1b675d-4d69-4c81-a54c-a6fd4a699ad4) ![screencapture-localhost-5500-2025-04-23-15_27_09](https://github.com/user-attachments/assets/02e400c8-a723-4e02-a41f-12912d78fe0c)
